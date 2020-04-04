@@ -1,0 +1,480 @@
+/*
+ArrayOfObjGenerator_0.02.mel (early beta)
+giovanni, January 2008
+
+MEL script generating 3D arrays of Objects.
+This program comes with absolute no warranty, use it at your own risk.
+*/
+
+/*
+-------------
+USE:
+
+#### source the script ###
+1 - window > general editors >script editor
+2 - file > load  (and choose this file)
+    edit > select all
+    command > execute
+The IDE window with the sliders should appear.
+
+
+### create an object ###
+3 - create > polygon primitives > cube 
+    you can create any object you like instead of a cube.
+    I usually get nice results using 3d letters or short words.
+    You can also use multiple objects, just need to group them
+    toghether afterward(ctrl+g).
+    If you are going to create a very high number of instances,
+    try to keep your geometry easy.
+
+4 - modify > center pivot (if needed)
+
+
+### create first group of instances ###
+5 - choose the number for "Instances 1st grade" (e.g. 5)
+    This slider with the number of instances is the only one you can
+    not modify once created the instances
+    (if you do you will get errors), so make sure you decide now how
+    many instances you like to have.
+6 - make sure your object is still selected and press the 
+    "create first grade instances" button.
+You may did not notice it, but instances of your object has been created.
+
+7 - use the "translate X offset" slider to see and move the instances
+8 - if you want use also the "rotate" sliders to get an idea what this 
+    script can do
+At this point you can already keyframe an animation using the timeslider
+and the "key 1st grade" button.
+
+
+### create second group of instances ###
+Sometimes the first group of instances will satisfy your needs, but often
+you will want to use a second level.
+In some cases also a third level.
+Use the black arrows to expand the frames and access the sliders of
+second and third level.
+
+9 - choose the number for "Instances 2nd grade" (e.g. 5)
+10- use the "Translate Y offset" for those instances.
+
+If you want you can create "Instances 3rd grade" and use the 
+"Translate Z offset" to separate those new instances.
+
+Now notice that you can still control the translation and rotation
+sliders of all the 3 groups.
+
+Keyframe the groups separatly using the buttons "key 1st, 2nd, 3rd grade".
+When you�re done, the button "delete static channels and exit" will delete
+the static unused channels and close the window.
+
+Hope you enjoy.
+
+------------------
+Advanced Tip: 
+
+You can translate the pivot (ins key) of the instances groups before using 
+the rotation sliders to get completly different results. Make sure you make
+the right selections in the outliner before translating the pivot.
+Do this carefully.
+
+------------------
+Bugs and problems:
+
+Very rarely you may notice a strange behave after a rotation and a translation, trying to reset the rotation,
+e.g.:
+- move the Rotate Z slider and then
+- move the Translate Y slider
+Resetting the Rz slider to 0 will not return the instances to the original positions.
+
+This is because changing the distance Tx the pivot of the rotation Rz has changed.
+
+*/
+
+proc finestra()
+{
+string $winName = "finestra";
+if (`window -exists $winName`)deleteUI $winName;
+
+window -title "array of objects generator, inspired by blender" -wh 350 900 $winName;
+
+columnLayout;
+
+
+//##################################################### 1 #########################################
+frameLayout -collapsable true -label "FIRST grade instances";
+columnLayout;
+
+intSliderGrp -label "Number of instances" -field true
+                          -minValue 2 -maxValue 10
+                          -fieldMinValue 2 -fieldMaxValue 50
+                          -value 5
+        -cc "$instances = `intSliderGrp -q -v instancesSlider`;"
+        -dc "$instances = `intSliderGrp -q -v instancesSlider`;" 
+        instancesSlider;
+
+button -l "       create first grade instances        " -c ("$instances =`intSliderGrp -q -v instancesSlider`; crea(1, $instances);");
+
+floatSliderGrp -label "Translate X offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        
+        -cc "$offsetX = `floatSliderGrp -q -v offsetXSlider`;aggiorna_tX(1, $instances, $offsetX);"
+        -dc "$offsetX = `floatSliderGrp -q -v offsetXSlider`;" 
+        offsetXSlider;
+
+floatSliderGrp -label "Translate Y offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        -cc "$offsetY = `floatSliderGrp -q -v offsetYSlider`;aggiorna_tY(1, $instances, $offsetY);"
+        -dc "$offsetY = `floatSliderGrp -q -v offsetYSlider`;" 
+        offsetYSlider;
+
+floatSliderGrp -label "Translate Z offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        -cc "$offsetZ = `floatSliderGrp -q -v offsetZSlider`;aggiorna_tZ(1, $instances, $offsetZ);"
+        -dc "$offsetZ = `floatSliderGrp -q -v offsetZSlider`;" 
+        offsetZSlider;
+
+
+floatSliderGrp -label "Rotate X offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_X = `floatSliderGrp -q -v offset_rot_XSlider`;aggiorna_rX(1, $instances, $offset_rot_X);"
+        -dc "$offset_rot_X = `floatSliderGrp -q -v offset_rot_XSlider`;" 
+        offset_rot_XSlider;
+
+floatSliderGrp -label "Rotate Y offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_Y = `floatSliderGrp -q -v offset_rot_YSlider`;aggiorna_rY(1, $instances, $offset_rot_Y);"
+        -dc "$offset_rot_Y = `floatSliderGrp -q -v offset_rot_YSlider`;" 
+        offset_rot_YSlider;
+
+floatSliderGrp -label "Rotate Z offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_Z = `floatSliderGrp -q -v offset_rot_ZSlider`;aggiorna_rZ(1, $instances, $offset_rot_Z);"
+        -dc "$offset_rot_Z = `floatSliderGrp -q -v offset_rot_ZSlider`;" 
+        offset_rot_ZSlider;
+
+/*floatSliderGrp -label "Scale" -field true
+                          -minValue 0 -maxValue 2
+                          -fieldMinValue 0 -fieldMaxValue 4
+                          -value 1
+        -cc "aggiorna_s(1, $instances, $offset_scale);"
+        -dc "$offset_scale = `floatSliderGrp -q -v offset_scale_Slider`;" 
+        offset_scale_Slider;*/
+
+button -l " key 1st grade " -c ("chiava(1);");
+text " ";
+
+//##################################################### 2 #########################################
+setParent ..;
+setParent ..;
+frameLayout -collapsable true -collapse true -label "SECOND grade instances";
+columnLayout;
+
+
+intSliderGrp -label "Number of instances" -field true
+                          -minValue 2 -maxValue 10
+                          -fieldMinValue 2 -fieldMaxValue 50
+                          -value 5
+        -cc "$instances2 = `intSliderGrp -q -v instancesSlider2`;"
+        -dc "$instances2 = `intSliderGrp -q -v instancesSlider2`;" 
+        instancesSlider2;
+
+button -l "       create second grade instances        " -c ("$instances2 =`intSliderGrp -q -v instancesSlider2`; crea(2, $instances2);");
+
+floatSliderGrp -label "Translate X offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        
+        -cc "$offsetX2 = `floatSliderGrp -q -v offsetXSlider2`;aggiorna_tX(2, $instances2, $offsetX2);"
+        -dc "$offsetX2 = `floatSliderGrp -q -v offsetXSlider2`;" 
+        offsetXSlider2;
+
+floatSliderGrp -label "Translate Y offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        -cc "$offsetY2 = `floatSliderGrp -q -v offsetYSlider2`;aggiorna_tY(2, $instances2, $offsetY2);"
+        -dc "$offsetY2 = `floatSliderGrp -q -v offsetYSlider2`;" 
+        offsetYSlider2;
+
+floatSliderGrp -label "Translate Z offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        -cc "$offsetZ2 = `floatSliderGrp -q -v offsetZSlider2`;aggiorna_tZ(2, $instances2, $offsetZ2);"
+        -dc "$offsetZ2 = `floatSliderGrp -q -v offsetZSlider2`;" 
+        offsetZSlider2;
+
+
+floatSliderGrp -label "Rotate X offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_X2 = `floatSliderGrp -q -v offset_rot_XSlider2`;aggiorna_rX(2, $instances2, $offset_rot_X2);"
+        -dc "$offset_rot_X2 = `floatSliderGrp -q -v offset_rot_XSlider2`;" 
+        offset_rot_XSlider2;
+
+floatSliderGrp -label "Rotate Y offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_Y2 = `floatSliderGrp -q -v offset_rot_YSlider2`;aggiorna_rY(2, $instances2, $offset_rot_Y2);"
+        -dc "$offset_rot_Y2 = `floatSliderGrp -q -v offset_rot_YSlider2`;" 
+        offset_rot_YSlider2;
+
+floatSliderGrp -label "Rotate Z offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_Z2 = `floatSliderGrp -q -v offset_rot_ZSlider2`;aggiorna_rZ(2, $instances2, $offset_rot_Z2);"
+        -dc "$offset_rot_Z2 = `floatSliderGrp -q -v offset_rot_ZSlider2`;" 
+        offset_rot_ZSlider2;
+
+/*floatSliderGrp -label "Scale" -field true
+                          -minValue 0 -maxValue 2
+                          -fieldMinValue 0 -fieldMaxValue 4
+                          -value 1
+        -cc "aggiorna_s(2, $instances2, $offset_scale2);"
+        -dc "$offset_scale2 = `floatSliderGrp -q -v offset_scale_Slider2`;" 
+        offset_scale_Slider2;*/
+
+button -l " key 2nd grade " -c ("chiava(2);");
+text " ";
+//##################################################### 3 #########################################
+setParent ..;
+setParent ..;
+frameLayout -collapsable true -collapse true -label "THIRD grade instances";
+columnLayout;
+
+intSliderGrp -label "Number of instances" -field true
+                          -minValue 2 -maxValue 10
+                          -fieldMinValue 2 -fieldMaxValue 50
+                          -value 5
+        -cc "$instances3 = `intSliderGrp -q -v instancesSlider3`;"
+        -dc "$instances3 = `intSliderGrp -q -v instancesSlider3`;" 
+        instancesSlider3;
+
+button -l "       create third grade instances        " -c ("$instances3 =`intSliderGrp -q -v instancesSlider3`; crea(3, $instances3);");
+
+floatSliderGrp -label "Translate X offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        
+        -cc "$offsetX3 = `floatSliderGrp -q -v offsetXSlider3`;aggiorna_tX(3, $instances3, $offsetX3);"
+        -dc "$offsetX3 = `floatSliderGrp -q -v offsetXSlider3`;" 
+        offsetXSlider3;
+
+floatSliderGrp -label "Translate Y offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        -cc "$offsetY3 = `floatSliderGrp -q -v offsetYSlider3`;aggiorna_tY(3, $instances3, $offsetY3);"
+        -dc "$offsetY3 = `floatSliderGrp -q -v offsetYSlider3`;" 
+        offsetYSlider3;
+
+floatSliderGrp -label "Translate Z offset" -field true
+                          -minValue -10 -maxValue 10
+                          -fieldMinValue -30 -fieldMaxValue 30
+                          -value 0
+        -cc "$offsetZ3 = `floatSliderGrp -q -v offsetZSlider3`;aggiorna_tZ(3, $instances3, $offsetZ3);"
+        -dc "$offsetZ3 = `floatSliderGrp -q -v offsetZSlider3`;" 
+        offsetZSlider3;
+
+
+floatSliderGrp -label "Rotate X offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_X3 = `floatSliderGrp -q -v offset_rot_XSlider3`;aggiorna_rX(3, $instances3, $offset_rot_X3);"
+        -dc "$offset_rot_X3 = `floatSliderGrp -q -v offset_rot_XSlider3`;" 
+        offset_rot_XSlider3;
+
+floatSliderGrp -label "Rotate Y offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_Y3 = `floatSliderGrp -q -v offset_rot_YSlider3`;aggiorna_rY(3, $instances3, $offset_rot_Y3);"
+        -dc "$offset_rot_Y3 = `floatSliderGrp -q -v offset_rot_YSlider3`;" 
+        offset_rot_YSlider3;
+
+floatSliderGrp -label "Rotate Z offset" -field true
+                          -minValue -30 -maxValue 30
+                          -fieldMinValue -200 -fieldMaxValue 200
+                          -value 0
+        -cc "$offset_rot_Z3 = `floatSliderGrp -q -v offset_rot_ZSlider3`;aggiorna_rZ(3, $instances3, $offset_rot_Z3);"
+        -dc "$offset_rot_Z3 = `floatSliderGrp -q -v offset_rot_ZSlider3`;" 
+        offset_rot_ZSlider3;
+
+/*floatSliderGrp -label "Scale" -field true
+                          -minValue 0 -maxValue 2
+                          -fieldMinValue 0 -fieldMaxValue 4
+                          -value 1
+        -cc "aggiorna_s(3, $instances3, $offset_scale3);"
+        -dc "$offset_scale3 = `floatSliderGrp -q -v offset_scale_Slider3`;" 
+        offset_scale_Slider3;*/
+
+button -l " key 3rd grade " -c ("chiava(3);");
+text " ";
+
+
+setParent ..;
+setParent ..;
+
+
+button -l "delete static channels and exit" -c ("uscita();");
+
+
+
+showWindow $winName;
+}
+
+
+proc crea(int $power, int $istanze)
+{
+   if($power == 2)
+   { select "_1copia*"; group; rename "_2copia_0";}
+   else if($power == 3)
+   { select "_2copia*"; group; rename "_3copia_0";}
+
+
+    string $nodes[] = `ls -sl -tail 1`; //ogg selezionati
+    $oggetto = $nodes[0]; //l�ultimo selezionato
+
+    if(!size($nodes)) // nel caso in cui non sia selezionato niente
+      {
+        print "WARNING:  select an object or a group first!!!\n";
+      }
+    else
+      {
+        select $oggetto;     //seleziona solo l�ultimo
+        if($power == 1) rename "_1copia_0";
+
+        $oggetto = "_1copia_0";
+        
+        print ("object selected: ---" + $oggetto + "---\n");
+        
+        setAttr($oggetto + ".tx") 0; // metti l�oggetto al centro dell�universo
+        setAttr($oggetto + ".ty") 0;
+        setAttr($oggetto + ".tz") 0;
+        
+        
+        int $i;
+        for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+          {
+        instance -name ("_" + $power + "copia_" + $i);  // crea istanza
+          }
+      }
+}
+
+
+proc aggiorna_tX(int $power, int $istanze, float $distX)
+{
+    int $i;
+    for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+    {
+        setAttr (("_" + $power + "copia_" + $i) + ".tx") ($distX *$i);  // posiziona istanza
+        move 0 0 0 ("_" + $power + "copia_" + $i + ".scalePivot") ("_" + $power + "copia_" + $i + ".rotatePivot"); 
+    }
+}
+proc aggiorna_tY(int $power, int $istanze, float $distY)
+{
+    
+    int $i;
+    for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+    {
+        setAttr (("_" + $power + "copia_" + $i) + ".ty") ($distY *$i);
+        move 0 0 0 ("_" + $power + "copia_" + $i + ".scalePivot") ("_" + $power + "copia_" + $i + ".rotatePivot"); 
+    }
+}
+
+proc aggiorna_tZ(int $power, int $istanze, float $distZ)
+{
+    
+    int $i;
+    for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+    {
+        setAttr (("_" + $power + "copia_" + $i) + ".tz") ($distZ *$i);
+        move 0 0 0 ("_" + $power + "copia_" + $i + ".scalePivot") ("_" + $power + "copia_" + $i + ".rotatePivot"); 
+    }
+}
+
+proc aggiorna_rX(int $power, int $istanze, float $ruotaX)
+{
+    int $i;
+    for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+    {
+      setAttr (("_" + $power + "copia_" + $i) + ".rx") ($ruotaX *$i);  // ruota istanza
+      //      move 0 0 0 ("_" + $power + "copia_" + $i + ".scalePivot") ("_" + $power + "copia_" + $i + ".rotatePivot"); 
+    }
+}
+
+proc aggiorna_rY(int $power, int $istanze, float $ruotaY)
+{
+    int $i;
+    for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+    {
+        setAttr (("_" + $power + "copia_" + $i) + ".ry") ($ruotaY *$i);
+        //      move 0 0 0 ("_" + $power + "copia_" + $i + ".scalePivot") ("_" + $power + "copia_" + $i + ".rotatePivot"); 
+    }
+}
+
+proc aggiorna_rZ(int $power, int $istanze, float $ruotaZ)
+{
+    int $i;
+    for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+    {
+        setAttr (("_" + $power + "copia_" + $i) + ".rz") ($ruotaZ *$i);
+        //      move 0 0 0 ("_" + $power + "copia_" + $i + ".scalePivot") ("_" + $power + "copia_" + $i + ".rotatePivot"); 
+    }
+}
+
+proc chiava(int $power)  // procedura per settare le chiavi sui frames
+{
+  print $power;
+
+  if($power == 1)
+    { select "_1copia*"; select -hierarchy;}
+  else if($power == 2)
+    { select "_2copia*";select -hierarchy;}
+  else if($power == 3)
+    { select "_3copia*"; select -hierarchy;}
+
+  setKeyframe -at translate;
+  setKeyframe -at rotate;
+  //  setKeyframe -at rotate;
+}
+
+
+proc uscita()
+{
+  select "_*copia*";
+  select -hierarchy;
+  delete -staticChannels;
+  deleteUI "finestra";
+}
+
+finestra();
+
+/*proc aggiorna_s(int $power, int $istanze, float $scala)
+{
+    int $i;
+    for($i=1; $i<=$istanze; $i++)  // per ogni istanza
+    {
+        setAttr (("_" + $power + "copia_" + $i) + ".sx") ($scala);
+        setAttr (("_" + $power + "copia_" + $i) + ".sy") ($scala);
+        setAttr (("_" + $power + "copia_" + $i) + ".sz") ($scala);
+    }
+}/*
