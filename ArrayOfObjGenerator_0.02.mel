@@ -64,7 +64,7 @@ Now notice that you can still control the translation and rotation
 sliders of all the 3 groups.
 
 Keyframe the groups separatly using the buttons "key 1st, 2nd, 3rd grade".
-When you�re done, the button "delete static channels and exit" will delete
+When you are done, the button "delete static channels and exit" will delete
 the static unused channels and close the window.
 
 Hope you enjoy.
@@ -351,7 +351,7 @@ proc crea(int $power, int $istanze)
 
 
     string $nodes[] = `ls -sl -tail 1`; //ogg selezionati
-    $oggetto = $nodes[0]; //l�ultimo selezionato
+    $oggetto = $nodes[0]; // ultimo selezionato
 
     if(!size($nodes)) // nel caso in cui non sia selezionato niente
       {
@@ -359,14 +359,14 @@ proc crea(int $power, int $istanze)
       }
     else
       {
-        select $oggetto;     //seleziona solo l�ultimo
+        select $oggetto;     //seleziona solo l ultimo
         if($power == 1) rename "_1copia_0";
 
         $oggetto = "_1copia_0";
         
         print ("object selected: ---" + $oggetto + "---\n");
         
-        setAttr($oggetto + ".tx") 0; // metti l�oggetto al centro dell�universo
+        setAttr($oggetto + ".tx") 0; // metti l oggetto al centro dell universo
         setAttr($oggetto + ".ty") 0;
         setAttr($oggetto + ".tz") 0;
         
