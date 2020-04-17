@@ -5,7 +5,7 @@ MEL Script IDE that generates Array of Objects
 giovanni, January 2008
 ---
 
-screenshots  
+screenshots of rendering examples  
 ![Image screenshot 2](https://raw.githubusercontent.com/galunni/ArrayOfObjGenerator/master/screenshots/ArrayOfObjGenerator_screenshot_2.jpg)
 ![Image screenshot 3](https://raw.githubusercontent.com/galunni/ArrayOfObjGenerator/master/screenshots/ArrayOfObjGenerator_screenshot_3.jpg)
 ![Image screenshot 4](https://raw.githubusercontent.com/galunni/ArrayOfObjGenerator/master/screenshots/ArrayOfObjGenerator_screenshot_4.jpg)
